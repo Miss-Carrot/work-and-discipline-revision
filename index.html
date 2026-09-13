@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Work & Discipline (revision)</title>
+<link rel="icon" type="image/png" sizes="48x48" href="favicon.png">
+<style>
+  :root{
+    --bg:#0f1116;
+    --card:#1a1d27;
+    --border:#2b2f3a;
+    --text:#e8e9ee;
+    --muted:#9aa0ad;
+    --accent:#5b8def;
+    --green:#2fbf71;
+    --green-bg:#12321f;
+    --green-text:#c9f6dc;
+    --red:#e6534a;
+    --red-bg:#3a1616;
+    --red-text:#ffd0cc;
+    --input-bg:#12141b;
+    --note-text:#e0a63e;
+  }
+  html[data-theme="light"]{
+    --bg:#f4f5f8;
+    --card:#ffffff;
+    --border:#dfe2ea;
+    --text:#1b1d24;
+    --muted:#6b7180;
+    --accent:#3763d6;
+    --green:#1f9d5c;
+    --green-bg:#e4f8ec;
+    --green-text:#0f5c33;
+    --red:#d63c33;
+    --red-bg:#fdeceb;
+    --red-text:#8a231c;
+    --input-bg:#f9f9fb;
+    --note-text:#a15c14;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding:24px 16px 60px;
+    transition:background .2s, color .2s;
+  }
+  .wrap{max-width:720px;margin:0 auto;}
+  h1{
+    text-align:center;
+    font-size:1.6rem;
+    margin-bottom:4px;
+  }
+  .sub{
+    text-align:center;
+    color:var(--muted);
+    font-size:0.9rem;
+    margin-bottom:20px;
+  }
+  .top-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    position:sticky;
+    top:0;
+    background:var(--bg);
+    padding:10px 0;
+    z-index:5;
+    border-bottom:1px solid var(--border);
+    margin-bottom:16px;
+  }
+  #timer{
+    font-size:1.3rem;
+    font-weight:700;
+    padding:6px 14px;
+    border-radius:8px;
+    background:var(--card);
+    border:1px solid var(--border);
+    min-width:80px;
+    text-align:center;
+  }
+  #timer.warn{color:var(--red);border-color:var(--red);}
+  #score{
+    font-size:1rem;
+    color:var(--muted);
+  }
+  #theme-toggle{
+    background:var(--card);
+    color:var(--text);
+    border:1px solid var(--border);
+    padding:6px 12px;
+    border-radius:8px;
+    font-size:0.85rem;
+    cursor:pointer;
+  }
+  .item{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px 16px;
+    margin-bottom:10px;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px;
+  }
+  .ru{
+    flex:1 1 260px;
+    font-size:1rem;
+  }
+  input.answer{
+    flex:1 1 220px;
+    padding:9px 12px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--input-bg);
+    color:var(--text);
+    font-size:0.95rem;
+    outline:none;
+    transition:background .15s, border-color .15s;
+  }
+  input.answer:focus{border-color:var(--accent);}
+  input.answer.correct{
+    background:var(--green-bg);
+    border-color:var(--green);
+    color:var(--green-text);
+  }
+  input.answer.incorrect{
+    background:var(--red-bg);
+    border-color:var(--red);
+    color:var(--red-text);
+  }
+  input.answer:disabled{opacity:0.7;}
+  .reveal{
+    flex-basis:100%;
+    font-size:0.82rem;
+    color:var(--muted);
+    display:none;
+  }
+  .note{
+    flex-basis:100%;
+    font-size:0.82rem;
+    color:var(--note-text);
+    display:none;
+  }
+  .note.show{display:block;}
+  #finish-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(10,11,15,0.55);
+    align-items:center;
+    justify-content:center;
+    z-index:20;
+  }
+  #finish-box{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:28px 30px;
+    text-align:center;
+    max-width:340px;
+    color:var(--text);
+  }
+  #finish-box h2{margin-top:0;}
+  #finish-box p{color:var(--muted);}
+  button.primary{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:10px 18px;
+    border-radius:8px;
+    font-size:0.95rem;
+    cursor:pointer;
+    margin-top:10px;
+  }
+  button.primary:hover{opacity:0.9;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Work &amp; Discipline (revision)</h1>
+  <p class="sub">Type the English equivalent of the Russian phrase. You have 3 minutes.</p>
+
+  <div class="top-bar">
+    <div id="timer">03:00</div>
+    <div id="score">0 / 15 correct</div>
+    <button id="theme-toggle" onclick="toggleTheme()">☀ Light</button>
+  </div>
+
+  <div id="quiz"></div>
+</div>
+
+<div id="finish-overlay">
+  <div id="finish-box">
+    <h2>Time's up!</h2>
+    <p id="final-score"></p>
+    <button class="primary" onclick="location.reload()">Try again</button>
+  </div>
+</div>
+
+<script>
+const data = [
+  { ru: "продолжать делать что-то / не бросать / не сдаваться", answers: ["to keep at it"] },
+  { ru: "отвлекать кого-то / беспокоить кого-то / мешать кому-то", answers: ["to bother someone"] },
+  { ru: "отвлечься", answers: ["to get sidetracked"] },
+  { ru: "искать оправдания / находить отговорки", answers: ["to find excuses"] },
+  { ru: "откладывать работу", answers: ["to put off work"] },
+  { ru: "много сделать", answers: ["to get a lot done"] },
+  { ru: "укладываться в жёсткие сроки", answers: ["to meet tight deadlines"] },
+  { ru: "не отвлекаться", answers: ["to avoid distractions"] },
+  { ru: "отставать от графика / выбиваться из графика", answers: ["to fall behind schedule"] },
+  { ru: "взяться за сложную задачу", answers: ["to tackle the challenge"] },
+  { ru: "разделаться со сложными задачами в первую очередь", answers: ["to get difficult tasks out of the way"] },
+  { ru: "придерживаться распорядка / соблюдать привычный режим", answers: ["to keep to a routine"] },
+  { ru: "отойти от рабочего стола / сделать перерыв и отойти от компьютера", answers: ["to get away from your desk"] },
+  { ru: "отвлекать от работы / отнимать внимание от работы", answers: ["to take your attention away from work"] },
+  { ru: "приступить к работе", answers: ["to get down to work"] }
+];
+
+function normalize(str){
+  let s = str.toLowerCase().trim();
+  s = s.replace(/\//g, " ");
+  s = s.replace(/[.,!?;:()"']/g, "");
+  s = s.replace(/\s+/g, " ").trim();
+  if (s.startsWith("to ")) s = s.slice(3).trim();
+  if (/^(a|an|the)\s/.test(s)) s = s.replace(/^(a|an|the)\s/, "").trim();
+  return s;
+}
+
+function leadingArticle(str){
+  let s = str.toLowerCase().trim();
+  s = s.replace(/[.,!?;:()"']/g, "").replace(/\s+/g, " ").trim();
+  if (s.startsWith("to ")) s = s.slice(3).trim();
+  const m = s.match(/^(a|an|the)\s/);
+  return m ? m[1] : null;
+}
+
+const quizEl = document.getElementById("quiz");
+let correctCount = 0;
+let timeLeft = 180;
+let timerId = null;
+let finished = false;
+
+data.forEach((item, idx) => {
+  const row = document.createElement("div");
+  row.className = "item";
+  row.id = "item-" + idx;
+
+  const ru = document.createElement("div");
+  ru.className = "ru";
+  ru.textContent = item.ru;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "answer";
+  input.placeholder = "Type in English...";
+  input.autocomplete = "off";
+  input.dataset.checked = "false";
+
+  const reveal = document.createElement("div");
+  reveal.className = "reveal";
+  reveal.textContent = "Correct answer: " + item.answers[0];
+
+  const note = document.createElement("div");
+  note.className = "note";
+  note.textContent = "Correct — but note: the full phrase includes an article (a / an / the).";
+
+  input.addEventListener("input", () => {
+    if (finished) return;
+    const typed = normalize(input.value);
+    if (typed.length === 0){
+      input.classList.remove("correct", "incorrect");
+      row.classList.remove("incorrect");
+      if (input.dataset.checked === "true"){
+        correctCount = Math.max(0, correctCount - 1);
+        updateScore();
+      }
+      input.dataset.checked = "false";
+      note.classList.remove("show");
+      return;
+    }
+    const matched = item.answers.find(a => normalize(a) === typed);
+    const isCorrect = !!matched;
+    if (isCorrect){
+      if (input.dataset.checked !== "true"){
+        correctCount++;
+        updateScore();
+      }
+      input.dataset.checked = "true";
+      input.classList.add("correct");
+      input.classList.remove("incorrect");
+      row.classList.remove("incorrect");
+
+      const canonicalArticle = leadingArticle(matched);
+      const typedArticle = leadingArticle(input.value);
+      if (canonicalArticle && !typedArticle){
+        note.classList.add("show");
+      } else {
+        note.classList.remove("show");
+      }
+    } else {
+      if (input.dataset.checked === "true"){
+        correctCount = Math.max(0, correctCount - 1);
+        updateScore();
+      }
+      input.dataset.checked = "false";
+      input.classList.add("incorrect");
+      input.classList.remove("correct");
+      row.classList.add("incorrect");
+      note.classList.remove("show");
+    }
+  });
+
+  row.appendChild(ru);
+  row.appendChild(input);
+  row.appendChild(reveal);
+  row.appendChild(note);
+  quizEl.appendChild(row);
+});
+
+function updateScore(){
+  document.getElementById("score").textContent = correctCount + " / " + data.length + " correct";
+}
+
+function formatTime(t){
+  const m = Math.floor(t / 60).toString().padStart(2, "0");
+  const s = (t % 60).toString().padStart(2, "0");
+  return m + ":" + s;
+}
+
+function tick(){
+  timeLeft--;
+  const timerEl = document.getElementById("timer");
+  timerEl.textContent = formatTime(Math.max(timeLeft, 0));
+  if (timeLeft <= 10) timerEl.classList.add("warn");
+  if (timeLeft <= 0){
+    clearInterval(timerId);
+    endQuiz();
+  }
+}
+
+function endQuiz(){
+  finished = true;
+  document.querySelectorAll("input.answer").forEach(inp => {
+    inp.disabled = true;
+    const row = inp.closest(".item");
+    if (inp.dataset.checked !== "true"){
+      row.classList.add("incorrect");
+    }
+  });
+  document.getElementById("final-score").textContent =
+    "You got " + correctCount + " out of " + data.length + " correct.";
+  document.getElementById("finish-overlay").style.display = "flex";
+}
+
+function toggleTheme(){
+  const html = document.documentElement;
+  const btn = document.getElementById("theme-toggle");
+  if (html.getAttribute("data-theme") === "light"){
+    html.removeAttribute("data-theme");
+    btn.textContent = "☀ Light";
+  } else {
+    html.setAttribute("data-theme", "light");
+    btn.textContent = "🌙 Dark";
+  }
+}
+
+timerId = setInterval(tick, 1000);
+</script>
+</body>
+</html>
