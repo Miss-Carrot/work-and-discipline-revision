@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <title>Work & Discipline (revision)</title>
@@ -187,7 +187,7 @@
   <div class="top-bar">
     <div id="timer">03:00</div>
     <div id="score">0 / 15 correct</div>
-    <button id="theme-toggle" onclick="toggleTheme()">☀ Light</button>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
   </div>
 
   <div id="quiz"></div>
@@ -238,13 +238,24 @@ function leadingArticle(str){
   return m ? m[1] : null;
 }
 
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+const shuffledData = shuffle(data);
+
 const quizEl = document.getElementById("quiz");
 let correctCount = 0;
 let timeLeft = 180;
 let timerId = null;
 let finished = false;
 
-data.forEach((item, idx) => {
+shuffledData.forEach((item, idx) => {
   const row = document.createElement("div");
   row.className = "item";
   row.id = "item-" + idx;
