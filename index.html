@@ -177,16 +177,31 @@
     margin-top:10px;
   }
   button.primary:hover{opacity:0.9;}
+
+  button.check{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:7px 16px;
+    border-radius:8px;
+    font-size:0.9rem;
+    cursor:pointer;
+  }
+  button.check:disabled{opacity:0.5;cursor:default;}
+  .reveal.show{display:block;}
+  #finish-emoji{font-size:3rem;margin:0 0 6px;}
+  #finish-phrase{margin:0 0 8px;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Work &amp; Discipline (revision)</h1>
-  <p class="sub">Type the English equivalent of the Russian phrase. You have 3 minutes.</p>
+  <p class="sub">Type the English equivalent of the Russian phrase. You have 5 minutes.</p>
 
   <div class="top-bar">
-    <div id="timer">03:00</div>
-    <div id="score">0 / 15 correct</div>
+    <div id="timer">05:00</div>
+    <div id="score">15 phrases</div>
+    <button class="check" id="check-btn" onclick="checkAnswers()">Check</button>
     <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
   </div>
 
@@ -195,12 +210,12 @@
 
 <div id="finish-overlay">
   <div id="finish-box">
-    <h2>Time's up!</h2>
+    <div id="finish-emoji"></div>
+    <h2 id="finish-phrase"></h2>
     <p id="final-score"></p>
-    <button class="primary" onclick="location.reload()">Try again</button>
+    <button class="primary" onclick="closePopup()">OK</button>
   </div>
 </div>
-
 <script>
 const data = [
   { ru: "продолжать делать что-то / не бросать / не сдаваться", answers: ["to keep at it"] },
@@ -249,9 +264,28 @@ function shuffle(arr){
 
 const shuffledData = shuffle(data);
 
+const scale = {
+  15: ["🌟", "Excellent!"],
+  14: ["🏆", "Great job!"],
+  13: ["🎉", "Very good!"],
+  12: ["👏", "Well done!"],
+  11: ["😊", "Good job!"],
+  10: ["👍", "Good!"],
+  9:  ["🙂", "Not bad!"],
+  8:  ["💪", "Keep it up!"],
+  7:  ["🌱", "You're halfway there!"],
+  6:  ["📚", "Keep practising!"],
+  5:  ["✏️", "More practice needed."],
+  4:  ["🔨", "Keep working on it!"],
+  3:  ["🌈", "Don't give up!"],
+  2:  ["💛", "Keep trying!"],
+  1:  ["🐣", "Keep practising!"],
+  0:  ["🔄", "Try again!"]
+};
+
 const quizEl = document.getElementById("quiz");
-let correctCount = 0;
-let timeLeft = 180;
+const rows = [];
+let timeLeft = 300;
 let timerId = null;
 let finished = false;
 
@@ -269,7 +303,8 @@ shuffledData.forEach((item, idx) => {
   input.className = "answer";
   input.placeholder = "Type in English...";
   input.autocomplete = "off";
-  input.dataset.checked = "false";
+  input.autocapitalize = "off";
+  input.spellcheck = false;
 
   const reveal = document.createElement("div");
   reveal.className = "reveal";
@@ -279,62 +314,13 @@ shuffledData.forEach((item, idx) => {
   note.className = "note";
   note.textContent = "Correct — but note: the full phrase includes an article (a / an / the).";
 
-  input.addEventListener("input", () => {
-    if (finished) return;
-    const typed = normalize(input.value);
-    if (typed.length === 0){
-      input.classList.remove("correct", "incorrect");
-      row.classList.remove("incorrect");
-      if (input.dataset.checked === "true"){
-        correctCount = Math.max(0, correctCount - 1);
-        updateScore();
-      }
-      input.dataset.checked = "false";
-      note.classList.remove("show");
-      return;
-    }
-    const matched = item.answers.find(a => normalize(a) === typed);
-    const isCorrect = !!matched;
-    if (isCorrect){
-      if (input.dataset.checked !== "true"){
-        correctCount++;
-        updateScore();
-      }
-      input.dataset.checked = "true";
-      input.classList.add("correct");
-      input.classList.remove("incorrect");
-      row.classList.remove("incorrect");
-
-      const canonicalArticle = leadingArticle(matched);
-      const typedArticle = leadingArticle(input.value);
-      if (canonicalArticle && !typedArticle){
-        note.classList.add("show");
-      } else {
-        note.classList.remove("show");
-      }
-    } else {
-      if (input.dataset.checked === "true"){
-        correctCount = Math.max(0, correctCount - 1);
-        updateScore();
-      }
-      input.dataset.checked = "false";
-      input.classList.add("incorrect");
-      input.classList.remove("correct");
-      row.classList.add("incorrect");
-      note.classList.remove("show");
-    }
-  });
-
   row.appendChild(ru);
   row.appendChild(input);
   row.appendChild(reveal);
   row.appendChild(note);
   quizEl.appendChild(row);
+  rows.push({ item, row, input, reveal, note });
 });
-
-function updateScore(){
-  document.getElementById("score").textContent = correctCount + " / " + data.length + " correct";
-}
 
 function formatTime(t){
   const m = Math.floor(t / 60).toString().padStart(2, "0");
@@ -347,24 +333,45 @@ function tick(){
   const timerEl = document.getElementById("timer");
   timerEl.textContent = formatTime(Math.max(timeLeft, 0));
   if (timeLeft <= 10) timerEl.classList.add("warn");
-  if (timeLeft <= 0){
-    clearInterval(timerId);
-    endQuiz();
-  }
+  if (timeLeft <= 0) checkAnswers();
 }
 
-function endQuiz(){
+function checkAnswers(){
+  if (finished) return;
   finished = true;
-  document.querySelectorAll("input.answer").forEach(inp => {
-    inp.disabled = true;
-    const row = inp.closest(".item");
-    if (inp.dataset.checked !== "true"){
-      row.classList.add("incorrect");
+  clearInterval(timerId);
+
+  let correctCount = 0;
+  rows.forEach(r => {
+    const typed = normalize(r.input.value);
+    const matched = typed.length > 0 ? r.item.answers.find(a => normalize(a) === typed) : null;
+    r.input.disabled = true;
+    if (matched){
+      correctCount++;
+      r.input.classList.add("correct");
+      const canonicalArticle = leadingArticle(matched);
+      const typedArticle = leadingArticle(r.input.value);
+      if (canonicalArticle && !typedArticle) r.note.classList.add("show");
+    } else {
+      r.input.classList.add("incorrect");
+      r.row.classList.add("incorrect");
+      r.reveal.classList.add("show");
     }
   });
+
+  document.getElementById("check-btn").disabled = true;
+  document.getElementById("score").textContent = correctCount + " / " + data.length + " correct";
+
+  const [emoji, phrase] = scale[correctCount];
+  document.getElementById("finish-emoji").textContent = emoji;
+  document.getElementById("finish-phrase").textContent = phrase;
   document.getElementById("final-score").textContent =
     "You got " + correctCount + " out of " + data.length + " correct.";
   document.getElementById("finish-overlay").style.display = "flex";
+}
+
+function closePopup(){
+  document.getElementById("finish-overlay").style.display = "none";
 }
 
 function toggleTheme(){
